@@ -12,7 +12,7 @@ from keras.layers import LSTM, Dense, Dropout, BatchNormalization
 from io import BytesIO
 
 model = Sequential()
-model.add(LSTM(128, return_sequences=True, activation='relu', input_shape=(25, 258)))
+model.add(LSTM(128, return_sequences=True, activation='relu', input_shape=(50, 258)))
 model.add(Dropout(0.2))
 model.add(LSTM(256, return_sequences=True, activation='relu'))
 model.add(Dropout(0.2))
@@ -21,13 +21,10 @@ model.add(BatchNormalization())
 model.add(Dense(256, activation='relu'))
 model.add(Dense(128, activation='relu'))
 model.add(Dense(64, activation='relu'))
-model.add(Dense(322, activation='softmax'))
+model.add(Dense(10, activation='softmax'))
 model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-model.load_weights("final.h5")
-
-
-def prediction(video_content, lstm_model):
-    actions = actions = ['about', 'accident', 'africa', 'afternoon', 'again', 'all', 'always', 'animal', 'any', 'apple',
+model.load_weights("NewAction3.h5")
+actions = actions = ['about', 'accident', 'africa', 'afternoon', 'again', 'all', 'always', 'animal', 'any', 'apple',
                'approve', 'argue', 'arrive', 'aunt', 'baby', 'back', 'bake', 'balance', 'bald', 'ball', 'banana', 'bar',
                'basement', 'basketball', 'bath', 'bathroom', 'bear', 'beard', 'bed', 'bedroom', 'before', 'better',
                'bicycle', 'bird', 'birthday', 'bitter', 'black', 'blue', 'book', 'both', 'bowl', 'bowling', 'box',
@@ -57,13 +54,17 @@ def prediction(video_content, lstm_model):
                'water', 'weak', 'wednesday', 'week', 'what', 'when', 'where', 'which', 'white', 'who', 'why', 'wife',
                'win', 'wind', 'window', 'with', 'woman', 'work', 'world', 'worry', 'write', 'wrong', 'year', 'yellow',
                'yes', 'yesterday', 'you']
+actions=actions[20:30]
+
+def prediction(video_content, lstm_model):
+
     sequence = []
     cap = cv2.VideoCapture(video_content)
 
     mp_holistic = mediapipe.solutions.holistic
     with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        toskip = int(frame_count // 25)
+        toskip = int(frame_count // 50)
         if toskip == 0:
             toskip = 1
 
@@ -103,7 +104,7 @@ def prediction(video_content, lstm_model):
             keypoints = np.concatenate([pose, lh, rh])
             sequence.append(keypoints)
 
-            if len(sequence) == 25:
+            if len(sequence) == 50:
                 cap.release()
                 break
 
@@ -117,7 +118,7 @@ def prediction(video_content, lstm_model):
 app = FastAPI()
 
 
-@app.post("/video")
+@app.post("")
 async def read_root(file: UploadFile = File()):
     file_location = f"videos/{file.filename}"
     with open(file_location, "wb") as video:
