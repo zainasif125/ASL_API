@@ -118,10 +118,9 @@ def prediction(video_content, lstm_model):
 app = FastAPI()
 
 
-@app.post("")
+@app.post("/video")
 async def read_root(file: UploadFile = File()):
     file_location = f"videos/{file.filename}"
     with open(file_location, "wb") as video:
         video.write(await file.read())
-    result = prediction(file_location, model)
-    return {"Prediction": result}
+    return {"Prediction": prediction(file_location, model)}
