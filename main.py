@@ -1,31 +1,30 @@
+import os.path
+import requests
 import uvicorn
 from fastapi import FastAPI, File, UploadFile, Form
-from typing import Annotated
+import cv2
+from typing import Union
 import numpy as np
 import mediapipe
 import cv2
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dropout, BatchNormalization, Dense
+from keras.models import Sequential
+from keras.layers import LSTM, Dense, Dropout, BatchNormalization
+from io import BytesIO
 
-model = Sequential([
-    LSTM(128, return_sequences=True, activation='relu', input_shape=(50, 258)),
-    Dropout(0.2),
-    LSTM(256, return_sequences=True, activation='relu'),
-    Dropout(0.2),
-    LSTM(256, return_sequences=False, activation='relu'),
-    BatchNormalization(),
-    Dense(256, activation='relu'),
-    Dense(128, activation='relu'),
-    Dense(64, activation='relu'),
-    Dense(10, activation='softmax')
-])
-
+model = Sequential()
+model.add(LSTM(128, return_sequences=True, activation='relu', input_shape=(50, 258)))
+model.add(Dropout(0.2))
+model.add(LSTM(256, return_sequences=True, activation='relu'))
+model.add(Dropout(0.2))
+model.add(LSTM(256, return_sequences=False, activation='relu'))
+model.add(BatchNormalization())
+model.add(Dense(256, activation='relu'))
+model.add(Dense(128, activation='relu'))
+model.add(Dense(64, activation='relu'))
+model.add(Dense(10, activation='softmax'))
 model.compile(optimizer='Adam', loss='categorical_crossentropy', metrics=['categorical_accuracy'])
-model.load_weights(r"E:\ASL\NewAction3.h5")
-
-
-def prediction(video_content, lstm_model):
-    actions = ['about', 'accident', 'africa', 'afternoon', 'again', 'all', 'always', 'animal', 'any', 'apple',
+model.load_weights("https://github.com/zainasif125/Mediapipe-API/blob/ec42b62996ef718b9849d7dcbe2115e1379ee53a/NewAction3.h5")
+actions = actions = ['about', 'accident', 'africa', 'afternoon', 'again', 'all', 'always', 'animal', 'any', 'apple',
                'approve', 'argue', 'arrive', 'aunt', 'baby', 'back', 'bake', 'balance', 'bald', 'ball', 'banana', 'bar',
                'basement', 'basketball', 'bath', 'bathroom', 'bear', 'beard', 'bed', 'bedroom', 'before', 'better',
                'bicycle', 'bird', 'birthday', 'bitter', 'black', 'blue', 'book', 'both', 'bowl', 'bowling', 'box',
@@ -55,7 +54,10 @@ def prediction(video_content, lstm_model):
                'water', 'weak', 'wednesday', 'week', 'what', 'when', 'where', 'which', 'white', 'who', 'why', 'wife',
                'win', 'wind', 'window', 'with', 'woman', 'work', 'world', 'worry', 'write', 'wrong', 'year', 'yellow',
                'yes', 'yesterday', 'you']
-    actions = actions[20:30]
+actions=actions[20:30]
+
+def prediction(video_content, lstm_model):
+
     sequence = []
     cap = cv2.VideoCapture(video_content)
 
@@ -109,27 +111,16 @@ def prediction(video_content, lstm_model):
     cap.release()
     cv2.destroyAllWindows()
     sequence = np.expand_dims(sequence, axis=0)[0]
+
     res = lstm_model.predict(np.expand_dims(sequence, axis=0))
     return actions[np.argmax(res)]
 
-
 app = FastAPI()
-origins = [
-     "http://109.205.182.203:5420",
-     ""
- ]
 
-app.add_middleware(
-     CORSMiddleware,
-     allow_origins=origins,
-     allow_credentials=True,
-     allow_methods=["*"],
-     allow_headers=["*"],)
 
-@app.post("/")
-async def read_root(file: UploadFile = File(...)):
-    file_location = f"E:/ASL/videos/{file.filename}.mp4"
+@app.post("/video")
+async def read_root(file: UploadFile = File()):
+    file_location = f"https://github.com/zainasif125/Mediapipe-API/blob/ec42b62996ef718b9849d7dcbe2115e1379ee53a/videos/{file.filename}"
     with open(file_location, "wb") as video:
         video.write(await file.read())
-    result=prediction(file_location,model)
-    return {'Prediction':result}
+    return {"Prediction": prediction(file_location, model)}
